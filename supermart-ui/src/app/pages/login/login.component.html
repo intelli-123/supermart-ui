@@ -1,0 +1,9 @@
+<main class="login-page">
+  <div class="login-page__card">
+    <app-logo />
+    <app-login-form
+      (loginSubmit)="onLoginSubmit($event)"
+      (forgotPassword)="onForgotPassword()"
+    />
+  </div>
+</main>

@@ -1,0 +1,65 @@
+<section class="alerts-section">
+
+  <!-- Section header -->
+  <div class="alerts-section__header">
+    <div class="alerts-section__header-left">
+      <h2 class="alerts-section__title">Active Alerts</h2>
+      <p class="alerts-section__desc">
+        Devices currently in alert or fault state — requires immediate action
+      </p>
+    </div>
+    <button type="button" class="alerts-section__view-all" (click)="onViewAll()">
+      View all devices →
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="alerts-table-wrap">
+    <table class="alerts-table" aria-label="Active alerts">
+      <thead>
+        <tr class="alerts-table__head-row">
+          <th class="alerts-table__th">Device Serial</th>
+          <th class="alerts-table__th">Store</th>
+          <th class="alerts-table__th">Unit</th>
+          <th class="alerts-table__th">Type</th>
+          <th class="alerts-table__th">Temp</th>
+          <th class="alerts-table__th">Threshold</th>
+          <th class="alerts-table__th">Status</th>
+          <th class="alerts-table__th">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.id) {
+          <tr class="alerts-table__row">
+            <td class="alerts-table__td alerts-table__td--serial">{{ row.serial }}</td>
+            <td class="alerts-table__td">{{ row.store }}</td>
+            <td class="alerts-table__td">{{ row.unit }}</td>
+            <td class="alerts-table__td">
+              <span [class]="typeClass(row.deviceType)">{{ row.deviceType }}</span>
+            </td>
+            <td class="alerts-table__td alerts-table__td--temp">{{ row.temperature }}</td>
+            <td class="alerts-table__td alerts-table__td--threshold">{{ row.threshold }}</td>
+            <td class="alerts-table__td">
+              <span [class]="statusClass(row.status)">{{ row.status }}</span>
+            </td>
+            <td class="alerts-table__td">
+              <button
+                type="button"
+                class="alerts-table__action-btn"
+                (click)="onViewDevice(row.id)"
+              >
+                View
+              </button>
+            </td>
+          </tr>
+        }
+        @if (rows().length === 0) {
+          <tr>
+            <td class="alerts-table__empty" colspan="8">No active alerts</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+</section>

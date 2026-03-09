@@ -1,0 +1,25 @@
+<div class="dashboard-layout">
+
+  <app-sidebar
+    activeRoute="dashboard"
+    (navSelect)="onNavSelect($event)"
+  />
+
+  <div class="dashboard-layout__main">
+    <app-topbar
+      title="Dashboard"
+      [lastUpdated]="lastUpdated"
+    />
+
+    <main class="dashboard-layout__content">
+      <app-kpi-cards />
+
+      <app-alerts-table
+        [rows]="alertRows"
+        (viewAll)="onViewAllDevices()"
+        (viewDevice)="onViewDevice($event)"
+      />
+    </main>
+  </div>
+
+</div>

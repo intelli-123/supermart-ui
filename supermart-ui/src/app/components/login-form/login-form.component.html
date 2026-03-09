@@ -1,0 +1,68 @@
+<form class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+  <hr class="login-form__divider" />
+
+  <!-- Email -->
+  <div class="login-form__group">
+    <label class="login-form__label" for="email">Email address</label>
+    <input
+      class="login-form__input"
+      [class.login-form__input--error]="emailControl?.invalid && emailControl?.touched"
+      id="email"
+      type="email"
+      formControlName="email"
+      placeholder="admin@supermart.com"
+      autocomplete="email"
+    />
+    @if (emailControl?.invalid && emailControl?.touched) {
+      <span class="login-form__error">Enter a valid email address</span>
+    }
+  </div>
+
+  <!-- Password -->
+  <div class="login-form__group">
+    <label class="login-form__label" for="password">Password</label>
+    <div class="login-form__input-wrap">
+      <input
+        class="login-form__input"
+        [class.login-form__input--error]="passwordControl?.invalid && passwordControl?.touched"
+        id="password"
+        [type]="showPassword ? 'text' : 'password'"
+        formControlName="password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+      />
+      <button
+        type="button"
+        class="login-form__eye"
+        (click)="togglePassword()"
+        [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+      >
+        @if (showPassword) {
+          <span aria-hidden="true">&#128065;&#65038;</span>
+        } @else {
+          <span aria-hidden="true">&#8857;</span>
+        }
+      </button>
+    </div>
+    @if (passwordControl?.invalid && passwordControl?.touched) {
+      <span class="login-form__error">Password is required</span>
+    }
+  </div>
+
+  <!-- Forgot password -->
+  <div class="login-form__forgot">
+    <button type="button" class="login-form__forgot-link" (click)="onForgotPassword()">
+      Forgot password?
+    </button>
+  </div>
+
+  <!-- Submit -->
+  <button type="submit" class="login-form__submit">Sign In</button>
+
+  <!-- Footer note -->
+  <p class="login-form__footer">
+    Enterprise access only. Contact IT for account requests.
+  </p>
+
+</form>

@@ -1,0 +1,37 @@
+<aside class="sidebar">
+
+  <!-- Logo -->
+  <div class="sidebar__logo">
+    <span class="sidebar__logo-mark">S</span>
+    <div class="sidebar__logo-text">
+      <span class="sidebar__logo-name">Supermart IoT</span>
+      <span class="sidebar__logo-sub">Temperature Monitoring</span>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar__nav" aria-label="Main navigation">
+    @for (item of navItems; track item.id) {
+      <a
+        class="sidebar__nav-item"
+        [class.sidebar__nav-item--active]="isActive(item)"
+        [routerLink]="item.route"
+        (click)="onNavClick(item)"
+        [attr.aria-current]="isActive(item) ? 'page' : null"
+      >
+        <span class="sidebar__nav-icon" aria-hidden="true">{{ item.icon }}</span>
+        <span class="sidebar__nav-label">{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <!-- User Profile -->
+  <div class="sidebar__user">
+    <div class="sidebar__avatar" aria-hidden="true">{{ user().initials }}</div>
+    <div class="sidebar__user-info">
+      <span class="sidebar__user-name">{{ user().name }}</span>
+      <span class="sidebar__user-role">{{ user().role }}</span>
+    </div>
+  </div>
+
+</aside>

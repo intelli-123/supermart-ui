@@ -1,0 +1,8 @@
+<header class="topbar">
+  <div class="topbar__left">
+    <h1 class="topbar__title">{{ title() }}</h1>
+    @if (lastUpdated()) {
+      <span class="topbar__meta">Last updated: {{ lastUpdated() }} ↻</span>
+    }
+  </div>
+</header>

@@ -1,0 +1,169 @@
+.alerts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__title {
+    font-family: Inter, sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  &__desc {
+    font-family: Inter, sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: #64748b;
+    margin: 0;
+  }
+
+  &__view-all {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: Inter, sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: #1e5799;
+    white-space: nowrap;
+    padding: 0;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.alerts-table-wrap {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0px 2px 8px 0px rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+}
+
+.alerts-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  &__head-row {
+    background-color: #f1f5f9;
+  }
+
+  &__th {
+    font-family: Inter, sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 14px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  &__row {
+    border-top: 1px solid #f1f5f9;
+    border-left: 2px solid #f87171;
+
+    &:hover {
+      background-color: #fafafa;
+    }
+  }
+
+  &__td {
+    font-family: Inter, sans-serif;
+    font-weight: 400;
+    font-size: 12.5px;
+    color: #374151;
+    padding: 12px 14px;
+    vertical-align: middle;
+
+    &--serial {
+      font-weight: 500;
+    }
+
+    &--temp {
+      font-weight: 700;
+      color: #ef4444;
+    }
+
+    &--threshold {
+      color: #374151;
+    }
+  }
+
+  &__action-btn {
+    padding: 5px 12px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: #f8fafc;
+    }
+  }
+
+  &__empty {
+    text-align: center;
+    padding: 32px;
+    color: #94a3b8;
+    font-family: Inter, sans-serif;
+    font-size: 13px;
+  }
+}
+
+// Badges
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: Inter, sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+
+  // Status badges
+  &--alert,
+  &--fault {
+    background-color: #fef2f2;
+    color: #ef4444;
+  }
+
+  &--warning {
+    background-color: #fffbeb;
+    color: #f59e0b;
+  }
+
+  // Device type badges
+  &--type-freezer {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  &--type-fridge,
+  &--type-cooler {
+    background-color: #f1f5f9;
+    color: #64748b;
+  }
+}
