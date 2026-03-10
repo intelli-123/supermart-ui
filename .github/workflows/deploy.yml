@@ -291,13 +291,15 @@ jobs:
 
           # Apply schema then seed data.
           # Rewrite 'USE supermartdb' → 'USE `ui-supermartdb`' so files work unchanged.
+          # --force: skip duplicate-key errors on re-runs (seed data already exists).
           for SQL_FILE in ../../../db/init/01_schema.sql ../../../db/init/02_data.sql; do
             echo "Applying ${SQL_FILE} ..."
             sed "s/USE supermartdb/USE \`${DB_NAME}\`/g" "${SQL_FILE}" | \
               mysql -h 127.0.0.1 -P 3307 \
                     -u "${DB_USER}" \
                     -p"${{ secrets.DB_PASSWORD }}" \
-                    --database="${DB_NAME}"
+                    --database="${DB_NAME}" \
+                    --force
           done
           echo "DB migrations complete."
 
