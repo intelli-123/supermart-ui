@@ -49,9 +49,14 @@ resource "google_cloud_run_v2_service" "app" {
         container_port = 8080
       }
 
+      # Activates application-docker.properties which sets:
+      #   - com.mysql.cj.jdbc.Driver (not H2)
+      #   - spring.h2.console.enabled=false
+      #   - spring.jpa.hibernate.ddl-auto=none
+      #   - spring.sql.init.mode=never
       env {
         name  = "SPRING_PROFILES_ACTIVE"
-        value = "cloud"
+        value = "docker"
       }
 
       # JDBC URL points to the Cloud SQL Auth Proxy sidecar on localhost
@@ -90,36 +95,11 @@ resource "google_cloud_run_v2_service" "app" {
         value = "60"
       }
 
-      # ── Spring Boot lazy-DB-init settings ────────────────────────────────
-      # Allow HikariCP pool to initialize even if the proxy tunnel isn't ready
+      # Allow HikariCP to initialise even if the proxy tunnel isn't ready yet;
+      # it will keep retrying connections once the proxy becomes available.
       env {
         name  = "SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT"
         value = "-1"
-      }
-
-      # HikariCP: keep retrying for up to 60 s when acquiring a connection
-      env {
-        name  = "SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT"
-        value = "60000"
-      }
-
-      # Prevent Hibernate from connecting to DB during EntityManagerFactory
-      # initialisation (dialect detection, metadata reads).
-      # We explicitly declare the dialect instead.
-      env {
-        name  = "SPRING_JPA_DATABASE_PLATFORM"
-        value = "org.hibernate.dialect.MySQL8Dialect"
-      }
-
-      env {
-        name  = "SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS"
-        value = "false"
-      }
-
-      # Do not auto-create/update schema at startup (prevents extra DB query)
-      env {
-        name  = "SPRING_JPA_HIBERNATE_DDL_AUTO"
-        value = "none"
       }
 
       # Enable /actuator/health/liveness + /actuator/health/readiness endpoints
