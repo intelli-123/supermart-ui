@@ -45,3 +45,14 @@ module "compute" {
   jwt_secret            = var.jwt_secret
   service_account_email = module.iam.service_account_email
 }
+
+# ─── Frontend — Cloud Run v2 (Angular / nginx) ────────────────────────────────
+module "frontend" {
+  source = "../../modules/frontend"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = "dev"
+  image       = var.frontend_image
+  api_url     = module.compute.cloud_run_url
+}

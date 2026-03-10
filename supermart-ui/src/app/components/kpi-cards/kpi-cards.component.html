@@ -1,5 +1,5 @@
 <section class="kpi-cards" aria-label="Key performance indicators">
-  @for (metric of metrics; track metric.label) {
+  @for (metric of metrics(); track metric.label) {
     <app-kpi-card
       [icon]="metric.icon"
       [value]="metric.value"

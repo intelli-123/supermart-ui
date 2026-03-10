@@ -46,6 +46,7 @@ jobs:
     environment: dev
     outputs:
       image_ref: ${{ steps.image.outputs.image_ref }}
+      frontend_image_ref: ${{ steps.frontend_image.outputs.image_ref }}
 
     steps:
       - name: Checkout
@@ -114,13 +115,29 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
           echo "image_ref=${IMAGE_REF}" >> $GITHUB_OUTPUT
 
-      - name: Docker build & push
+      - name: Docker build & push (backend)
         run: |
           set -euo pipefail
           echo "Building ${{ steps.image.outputs.image_ref }} from ./supermart-iot ..."
           docker build -t "${{ steps.image.outputs.image_ref }}" --no-cache ./supermart-iot
           echo "Pushing ${{ steps.image.outputs.image_ref }} ..."
           docker push "${{ steps.image.outputs.image_ref }}"
+
+      # Frontend image: same SHA tag, different image name
+      - name: Compute frontend image tag
+        id: frontend_image
+        run: |
+          TAG=$(echo "$GITHUB_SHA" | cut -c1-7)
+          FRONTEND_IMAGE_REF="${{ env.GCR_HOST }}/${{ env.GCP_PROJECT_ID }}/ui-supermart-ui:${TAG}"
+          echo "image_ref=${FRONTEND_IMAGE_REF}" >> $GITHUB_OUTPUT
+
+      - name: Docker build & push (frontend)
+        run: |
+          set -euo pipefail
+          echo "Building ${{ steps.frontend_image.outputs.image_ref }} from ./supermart-ui ..."
+          docker build -t "${{ steps.frontend_image.outputs.image_ref }}" --no-cache ./supermart-ui
+          echo "Pushing ${{ steps.frontend_image.outputs.image_ref }} ..."
+          docker push "${{ steps.frontend_image.outputs.image_ref }}"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Job 2: Terraform — ui-dev (Cloud Run + Cloud SQL)
@@ -133,6 +150,7 @@ jobs:
 
     env:
       TF_VAR_image: ${{ needs.build-and-push.outputs.image_ref }}
+      TF_VAR_frontend_image: ${{ needs.build-and-push.outputs.frontend_image_ref }}
       TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
       TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
       WORKING_DIR: ./terraform/environments/dev
@@ -226,6 +244,7 @@ jobs:
         run: |
           terraform plan -input=false -out=tfplan \
             -var="image=${{ env.TF_VAR_image }}" \
+            -var="frontend_image=${{ env.TF_VAR_frontend_image }}" \
             -var="db_password=${{ env.TF_VAR_db_password }}" \
             -var="jwt_secret=${{ env.TF_VAR_jwt_secret }}"
 
@@ -286,8 +305,9 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: |
           echo "=== Deployment Complete ==="
-          echo "Cloud Run URL : $(terraform output -raw cloud_run_url)"
+          echo "Backend URL   : $(terraform output -raw cloud_run_url)"
           echo "Swagger UI    : $(terraform output -raw swagger_ui_url)"
+          echo "Frontend URL  : $(terraform output -raw frontend_url)"
 
       - name: Post failure summary to PR
         if: failure()

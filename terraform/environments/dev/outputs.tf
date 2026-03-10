@@ -22,3 +22,8 @@ output "cloud_sql_connection_name" {
   description = "Cloud SQL connection name (for local Cloud SQL Auth Proxy)"
   value       = module.database.connection_name
 }
+
+output "frontend_url" {
+  description = "Public URL of the Angular frontend"
+  value       = module.frontend.frontend_url
+}

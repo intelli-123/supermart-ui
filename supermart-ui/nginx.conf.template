@@ -1,0 +1,32 @@
+# nginx.conf.template — processed by the official nginx Docker image via envsubst.
+# $API_URL is injected as an env var in the Cloud Run container (Terraform).
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Reverse-proxy all /api/* calls to the backend Cloud Run service.
+    # This eliminates CORS issues: the browser only ever talks to this origin.
+    location /api/ {
+        proxy_pass          ${API_URL}/api/;
+        proxy_http_version  1.1;
+        proxy_set_header    Host              $proxy_host;
+        proxy_set_header    X-Real-IP         $remote_addr;
+        proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header    X-Forwarded-Proto $scheme;
+        proxy_read_timeout  60s;
+    }
+
+    # SPA fallback — all unknown paths serve index.html for client-side routing.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Health check endpoint for Cloud Run liveness/startup probes.
+    location /healthz {
+        access_log off;
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+}

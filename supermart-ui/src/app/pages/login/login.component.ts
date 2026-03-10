@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AppLogoComponent } from '../../components/app-logo/app-logo.component';
 import { LoginFormComponent, LoginCredentials } from '../../components/login-form/login-form.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login-page',
@@ -11,16 +12,22 @@ import { LoginFormComponent, LoginCredentials } from '../../components/login-for
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {
-  constructor(private router: Router) {}
+  constructor(private router: Router, private auth: AuthService) {}
 
   onLoginSubmit(credentials: LoginCredentials): void {
-    // TODO: integrate with authentication service
-    console.log('Login attempted with:', credentials.email);
-    this.router.navigate(['/dashboard']);
+    this.auth.login(credentials.email, credentials.password).subscribe({
+      next: res => {
+        if (res.success) {
+          this.router.navigate(['/dashboard']);
+        }
+      },
+      error: err => {
+        console.error('Login failed:', err);
+      }
+    });
   }
 
   onForgotPassword(): void {
-    // TODO: navigate to forgot-password page
     console.log('Forgot password requested');
   }
 }

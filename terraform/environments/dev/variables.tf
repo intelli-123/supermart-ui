@@ -26,3 +26,8 @@ variable "jwt_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "frontend_image" {
+  description = "Full Docker image reference for the Angular/nginx frontend (e.g. gcr.io/project/ui-supermart-ui:abc1234)"
+  type        = string
+}
