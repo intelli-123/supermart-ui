@@ -26,7 +26,9 @@ resource "google_cloud_run_v2_service" "app" {
     containers {
       name  = "ui-cloud-sql-proxy"
       image = "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
-      args  = ["--address=127.0.0.1", "--port=3306", var.db_connection_name]
+      # --http-port starts the health/metrics server; without it, port 9090
+      # is never bound and the startup probe fails with connection refused.
+      args  = ["--address=127.0.0.1", "--port=3306", "--http-port=9090", var.db_connection_name]
 
       resources {
         limits = {
