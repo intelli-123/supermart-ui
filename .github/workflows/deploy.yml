@@ -240,6 +240,48 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: terraform apply -input=false tfplan
 
+      # Run schema + seed SQL against Cloud SQL via the Auth Proxy.
+      # Uses CREATE TABLE IF NOT EXISTS so it is safe to re-run on every deploy.
+      - name: Run DB migrations (idempotent)
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          set -euo pipefail
+          DB_CONN=$(terraform output -raw cloud_sql_connection_name)
+          DB_NAME="ui-supermartdb"
+          DB_USER="ui-app"
+
+          # Install MySQL client
+          sudo apt-get install -y --no-install-recommends mysql-client 2>/dev/null
+
+          # Download Cloud SQL Auth Proxy v2
+          curl -sSL -o cloud-sql-proxy \
+            https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.1/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+
+          # Start proxy on port 3307 (background)
+          ./cloud-sql-proxy --address 127.0.0.1 --port 3307 "${DB_CONN}" &
+          PROXY_PID=$!
+          trap "kill $PROXY_PID 2>/dev/null || true" EXIT
+
+          # Wait up to 60 s for proxy to be ready
+          for i in $(seq 1 30); do
+            nc -z 127.0.0.1 3307 2>/dev/null && break
+            echo "Waiting for Cloud SQL proxy... ($i/30)"
+            sleep 2
+          done
+
+          # Apply schema then seed data.
+          # Rewrite 'USE supermartdb' → 'USE `ui-supermartdb`' so files work unchanged.
+          for SQL_FILE in ../../../db/init/01_schema.sql ../../../db/init/02_data.sql; do
+            echo "Applying ${SQL_FILE} ..."
+            sed "s/USE supermartdb/USE \`${DB_NAME}\`/g" "${SQL_FILE}" | \
+              mysql -h 127.0.0.1 -P 3307 \
+                    -u "${DB_USER}" \
+                    -p"${{ secrets.DB_PASSWORD }}" \
+                    --database="${DB_NAME}"
+          done
+          echo "DB migrations complete."
+
       - name: Show deployment URLs
         working-directory: ${{ env.WORKING_DIR }}
         run: |
