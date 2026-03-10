@@ -19,10 +19,28 @@ resource "google_cloud_run_v2_service" "app" {
       max_instance_count = 3
     }
 
-    # ── Ingress container: Spring Boot API ───────────────────────────────────
+    # ── Sidecar container: Cloud SQL Auth Proxy v2 ───────────────────────────
+    # Starts FIRST. Listens on 127.0.0.1:3306 and forwards to Cloud SQL,
+    # authenticating via the service account attached to the Cloud Run revision.
     containers {
-      name  = "ui-api"
-      image = var.image
+      name  = "ui-cloud-sql-proxy"
+      image = "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
+      args  = ["--address=127.0.0.1", "--port=3306", var.db_connection_name]
+
+      resources {
+        limits = {
+          cpu    = "0.5"
+          memory = "256Mi"
+        }
+      }
+    }
+
+    # ── Ingress container: Spring Boot API ───────────────────────────────────
+    # depends_on ensures the proxy sidecar starts before this container.
+    containers {
+      name       = "ui-api"
+      image      = var.image
+      depends_on = ["ui-cloud-sql-proxy"]
 
       ports {
         container_port = 8080
@@ -69,6 +87,19 @@ resource "google_cloud_run_v2_service" "app" {
         value = "60"
       }
 
+      # Allow HikariCP to keep retrying the DB connection on startup
+      # instead of failing immediately if the proxy tunnel isn't ready yet.
+      env {
+        name  = "SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT"
+        value = "-1"
+      }
+
+      # Enable Spring Boot liveness/readiness probes at separate endpoints
+      env {
+        name  = "MANAGEMENT_HEALTH_PROBES_ENABLED"
+        value = "true"
+      }
+
       resources {
         limits = {
           cpu    = "1"
@@ -76,42 +107,26 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
-      # Wait for the JVM to warm up before the liveness check kicks in
+      # startup_probe uses /liveness so it passes even while DB is connecting
       startup_probe {
         http_get {
-          path = "/api/actuator/health"
+          path = "/api/actuator/health/liveness"
           port = 8080
         }
         initial_delay_seconds = 30
         period_seconds        = 10
-        failure_threshold     = 6
+        failure_threshold     = 12
         timeout_seconds       = 5
       }
 
       liveness_probe {
         http_get {
-          path = "/api/actuator/health"
+          path = "/api/actuator/health/liveness"
           port = 8080
         }
         period_seconds    = 30
         failure_threshold = 3
         timeout_seconds   = 5
-      }
-    }
-
-    # ── Sidecar container: Cloud SQL Auth Proxy v2 ───────────────────────────
-    # Listens on 127.0.0.1:3306 and forwards to the Cloud SQL backend,
-    # authenticating via the service account attached to the Cloud Run revision.
-    containers {
-      name  = "ui-cloud-sql-proxy"
-      image = "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
-      args  = ["--address=127.0.0.1", "--port=3306", var.db_connection_name]
-
-      resources {
-        limits = {
-          cpu    = "0.5"
-          memory = "256Mi"
-        }
       }
     }
   }
