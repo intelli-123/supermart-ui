@@ -26,10 +26,11 @@ resource "google_cloud_run_v2_service" "app" {
     containers {
       name  = "ui-cloud-sql-proxy"
       image = "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
-      # --health-check enables the HTTP health server (required by depends_on probe).
-      # --http-port sets the port (default 9090). Without --health-check the proxy
-      # silently ignores --http-port and never binds the server.
-      args  = ["--health-check", "--http-port=9090", "--address=127.0.0.1", "--port=3306", var.db_connection_name]
+      # --health-check   enables the HTTP health server
+      # --http-address   0.0.0.0 so Cloud Run's probe infra can reach it
+      #                  (localhost/127.0.0.1 only is not reachable by the probe)
+      # --http-port      9090 — where /readyz and /healthz are served
+      args  = ["--health-check", "--http-address=0.0.0.0", "--http-port=9090", "--address=127.0.0.1", "--port=3306", var.db_connection_name]
 
       resources {
         limits = {
