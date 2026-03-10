@@ -10,10 +10,10 @@ name: Build, Push & Deploy — Supermart UI
 on:
   workflow_dispatch:
   push:
-    branches: [master]
+    branches: [main, master]
   pull_request:
     types: [closed]
-    branches: [master]
+    branches: [main, master]
 
 permissions:
   contents: read
