@@ -5,6 +5,10 @@
 #
 # The Spring Boot app connects to MySQL via 127.0.0.1:3306 (the sidecar).
 # The sidecar authenticates to Cloud SQL using the attached service account (IAM).
+#
+# Note: `depends_on` between containers requires the google-beta provider.
+# Instead we configure Spring Boot to start without a live DB connection so
+# the startup probe passes before the proxy tunnel is established.
 # ─────────────────────────────────────────────────────────────────────────────
 resource "google_cloud_run_v2_service" "app" {
   name     = "svc-ui-${var.environment}"
@@ -20,17 +24,13 @@ resource "google_cloud_run_v2_service" "app" {
     }
 
     # ── Sidecar container: Cloud SQL Auth Proxy v2 ───────────────────────────
-    # Starts FIRST (required when ui-api uses depends_on this container).
-    # Listens on 127.0.0.1:3306 for MySQL connections.
-    # Health server runs on 0.0.0.0:9090 — endpoints /readyz, /healthz.
+    # Listens on 127.0.0.1:3306 and authenticates to Cloud SQL via IAM.
+    # Starts concurrently with ui-api; Spring Boot is configured to retry the
+    # DB connection so it doesn't fail if the proxy tunnel isn't ready yet.
     containers {
       name  = "ui-cloud-sql-proxy"
       image = "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
-      # --health-check   enables the HTTP health server
-      # --http-address   0.0.0.0 so Cloud Run's probe infra can reach it
-      #                  (localhost/127.0.0.1 only is not reachable by the probe)
-      # --http-port      9090 — where /readyz and /healthz are served
-      args  = ["--health-check", "--http-address=0.0.0.0", "--http-port=9090", "--address=127.0.0.1", "--port=3306", var.db_connection_name]
+      args  = ["--address=127.0.0.1", "--port=3306", var.db_connection_name]
 
       resources {
         limits = {
@@ -38,27 +38,12 @@ resource "google_cloud_run_v2_service" "app" {
           memory = "256Mi"
         }
       }
-
-      # Cloud Run requires a startup probe on any container referenced in depends_on
-      # cloud-sql-proxy v2 health paths: /liveness, /readiness, /startup
-      startup_probe {
-        http_get {
-          path = "/readiness"
-          port = 9090
-        }
-        initial_delay_seconds = 2
-        period_seconds        = 5
-        failure_threshold     = 10
-        timeout_seconds       = 5
-      }
     }
 
     # ── Ingress container: Spring Boot API ───────────────────────────────────
-    # depends_on ensures the proxy sidecar starts before this container.
     containers {
-      name       = "ui-api"
-      image      = var.image
-      depends_on = ["ui-cloud-sql-proxy"]
+      name  = "ui-api"
+      image = var.image
 
       ports {
         container_port = 8080
@@ -69,7 +54,7 @@ resource "google_cloud_run_v2_service" "app" {
         value = "cloud"
       }
 
-      # The JDBC URL points to the Cloud SQL Auth Proxy sidecar on localhost
+      # JDBC URL points to the Cloud SQL Auth Proxy sidecar on localhost
       env {
         name  = "SPRING_DATASOURCE_URL"
         value = "jdbc:mysql://127.0.0.1:3306/${var.db_name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
@@ -105,14 +90,39 @@ resource "google_cloud_run_v2_service" "app" {
         value = "60"
       }
 
-      # Allow HikariCP to keep retrying the DB connection on startup
-      # instead of failing immediately if the proxy tunnel isn't ready yet.
+      # ── Spring Boot lazy-DB-init settings ────────────────────────────────
+      # Allow HikariCP pool to initialize even if the proxy tunnel isn't ready
       env {
         name  = "SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT"
         value = "-1"
       }
 
-      # Enable Spring Boot liveness/readiness probes at separate endpoints
+      # HikariCP: keep retrying for up to 60 s when acquiring a connection
+      env {
+        name  = "SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT"
+        value = "60000"
+      }
+
+      # Prevent Hibernate from connecting to DB during EntityManagerFactory
+      # initialisation (dialect detection, metadata reads).
+      # We explicitly declare the dialect instead.
+      env {
+        name  = "SPRING_JPA_DATABASE_PLATFORM"
+        value = "org.hibernate.dialect.MySQL8Dialect"
+      }
+
+      env {
+        name  = "SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS"
+        value = "false"
+      }
+
+      # Do not auto-create/update schema at startup (prevents extra DB query)
+      env {
+        name  = "SPRING_JPA_HIBERNATE_DDL_AUTO"
+        value = "none"
+      }
+
+      # Enable /actuator/health/liveness + /actuator/health/readiness endpoints
       env {
         name  = "MANAGEMENT_HEALTH_PROBES_ENABLED"
         value = "true"
@@ -125,7 +135,8 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
-      # startup_probe uses /liveness so it passes even while DB is connecting
+      # startup_probe checks /liveness (app alive, not DB-dependent)
+      # so it passes even while HikariCP is still connecting to the proxy
       startup_probe {
         http_get {
           path = "/api/actuator/health/liveness"
