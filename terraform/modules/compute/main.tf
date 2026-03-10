@@ -20,8 +20,9 @@ resource "google_cloud_run_v2_service" "app" {
     }
 
     # ── Sidecar container: Cloud SQL Auth Proxy v2 ───────────────────────────
-    # Starts FIRST. Listens on 127.0.0.1:3306 and forwards to Cloud SQL,
-    # authenticating via the service account attached to the Cloud Run revision.
+    # Starts FIRST (required when ui-api uses depends_on this container).
+    # Listens on 127.0.0.1:3306 for MySQL connections.
+    # Health server runs on 0.0.0.0:9090 — endpoints /readyz, /healthz.
     containers {
       name  = "ui-cloud-sql-proxy"
       image = "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
@@ -32,6 +33,18 @@ resource "google_cloud_run_v2_service" "app" {
           cpu    = "0.5"
           memory = "256Mi"
         }
+      }
+
+      # Cloud Run requires a startup probe on any container referenced in depends_on
+      startup_probe {
+        http_get {
+          path = "/readyz"
+          port = 9090
+        }
+        initial_delay_seconds = 2
+        period_seconds        = 5
+        failure_threshold     = 10
+        timeout_seconds       = 5
       }
     }
 
