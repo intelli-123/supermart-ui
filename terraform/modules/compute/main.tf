@@ -40,9 +40,10 @@ resource "google_cloud_run_v2_service" "app" {
       }
 
       # Cloud Run requires a startup probe on any container referenced in depends_on
+      # cloud-sql-proxy v2 health paths: /liveness, /readiness, /startup
       startup_probe {
         http_get {
-          path = "/readyz"
+          path = "/readiness"
           port = 9090
         }
         initial_delay_seconds = 2
