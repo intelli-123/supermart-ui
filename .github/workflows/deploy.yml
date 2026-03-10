@@ -185,6 +185,12 @@ jobs:
             echo "Bucket ${BUCKET} already exists."
           fi
 
+      # Remove stale lock left by a previously interrupted run (safe: only one
+      # deploy job runs at a time via the environment concurrency gate).
+      - name: Release stale Terraform state lock (if any)
+        run: |
+          gsutil rm -f gs://tfstate-ui-dev/terraform/state/default.tflock 2>/dev/null || true
+
       - name: Terraform Init
         working-directory: ${{ env.WORKING_DIR }}
         run: terraform init -input=false
